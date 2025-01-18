@@ -35,8 +35,6 @@ async function run() {
       res.send({ token });
     });
 
-
-    
     // middlewares
     const verifyToken = (req, res, next) => {
       const authorization = req.headers?.authorization;
@@ -73,6 +71,38 @@ async function run() {
         return res.status(401).send({ message: "forbidden access" });
       next();
     };
+
+    // Check admin
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params?.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "unauthorized access" });
+      }
+
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === "admin";
+      }
+      res.send({ admin });
+    });
+
+    // Check Seller
+    app.get("/users/seller/:email", verifyToken, async (req, res) => {
+      const email = req.params?.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "unauthorized access" });
+      }
+
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let seller = false;
+      if (user) {
+        seller = user?.role === "seller";
+      }
+      res.send({ seller });
+    });
 
     // user related apis
     app.post("/users", async (req, res) => {
