@@ -25,6 +25,8 @@ async function run() {
   try {
     const db = client.db("parmaWorld");
     const userCollection = db.collection("users");
+    const medicineCollection = db.collection("medicine");
+    const categoryCollection = db.collection("category");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -116,6 +118,14 @@ async function run() {
       // Save the new user
       const result = await userCollection.insertOne(user);
       res.status(201).send(result);
+    });
+
+    
+    // Category related api
+    app.post("/category", async (req, res) => {
+      const categoryData = req.body;
+      const result = await categoryCollection.insertOne(categoryData);
+      res.send(result);
     });
 
     // Connect the client to the server	(optional starting in v4.7)
