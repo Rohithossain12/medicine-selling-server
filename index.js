@@ -107,6 +107,25 @@ async function run() {
     });
 
     // user related apis
+    app.get("/users", async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    // updated user role
+    app.patch("/users/:id", verifyToken, async (req, res) => {
+      const id = req.params?.id;
+      const newRole = req.body.role;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: newRole,
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
     app.post("/users", async (req, res) => {
       const user = req.body;
       // Check if the user already exists based on email
@@ -125,7 +144,7 @@ async function run() {
       const result = await categoryCollection.find().toArray();
       res.send(result);
     });
-
+    //  save category data in db
     app.post("/category", verifyToken, async (req, res) => {
       const categoryData = req.body;
       const result = await categoryCollection.insertOne(categoryData);
