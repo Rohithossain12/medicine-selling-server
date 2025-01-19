@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 const app = express();
 
@@ -120,11 +120,38 @@ async function run() {
       res.status(201).send(result);
     });
 
-    
     // Category related api
-    app.post("/category", async (req, res) => {
+    app.get("/category", async (req, res) => {
+      const result = await categoryCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.post("/category", verifyToken, async (req, res) => {
       const categoryData = req.body;
       const result = await categoryCollection.insertOne(categoryData);
+      res.send(result);
+    });
+
+    // Update a category by ID
+    app.put("/category/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const { categoryName, categoryImage } = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          categoryName,
+          categoryImage,
+        },
+      };
+      const result = await categoryCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+
+    // Delete a category by ID
+    app.delete("/category/:id", verifyToken, async (req, res) => {
+      const id = req.params?.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await categoryCollection.deleteOne(query);
       res.send(result);
     });
 
