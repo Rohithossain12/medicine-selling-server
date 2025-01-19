@@ -139,6 +139,14 @@ async function run() {
       res.status(201).send(result);
     });
 
+    // Medicine Related api
+    //  save medicine data in db
+    app.post("/medicines", verifyToken, async (req, res) => {
+      const medicineData = req.body;
+      const result = await medicineCollection.insertOne(medicineData);
+      res.send(result);
+    });
+
     // Category related api
     app.get("/category", async (req, res) => {
       const result = await categoryCollection.find().toArray();
