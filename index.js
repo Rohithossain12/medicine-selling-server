@@ -140,10 +140,34 @@ async function run() {
     });
 
     // Medicine Related api
+    // get all medicine
+    app.get("/medicines", verifyToken, async (req, res) => {
+      const result = await medicineCollection.find().toArray();
+      res.send(result);
+    });
     //  save medicine data in db
     app.post("/medicines", verifyToken, async (req, res) => {
       const medicineData = req.body;
       const result = await medicineCollection.insertOne(medicineData);
+      res.send(result);
+    });
+
+    // Update a medicine by ID
+    app.put("/medicine/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const updateMedicine = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: updateMedicine,
+      };
+      const result = await medicineCollection.updateOne(filter, updatedDoc);
+    });
+
+    // Delete a Medicine By ID
+    app.delete("/medicine/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await medicineCollection.deleteOne(filter);
       res.send(result);
     });
 
@@ -162,12 +186,13 @@ async function run() {
     // Update a category by ID
     app.put("/category/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
-      const { categoryName, categoryImage } = req.body;
+      const { categoryName, companyName, categoryImage } = req.body;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
         $set: {
           categoryName,
           categoryImage,
+          companyName,
         },
       };
       const result = await categoryCollection.updateOne(filter, updatedDoc);
