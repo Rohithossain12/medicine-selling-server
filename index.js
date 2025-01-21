@@ -140,11 +140,19 @@ async function run() {
     });
 
     // Medicine Related api
+
     // get all medicine
-    app.get("/medicines", verifyToken, async (req, res) => {
-      const result = await medicineCollection.find().toArray();
+    app.get("/medicines", async (req, res) => {
+      const { category } = req.query; // Extract category from query parameters
+
+      let query = {};
+      if (category) {
+        query = { category }; // Add category filter if provided
+      }
+      const result = await medicineCollection.find(query).toArray();
       res.send(result);
     });
+
     //  save medicine data in db
     app.post("/medicines", verifyToken, async (req, res) => {
       const medicineData = req.body;
@@ -171,6 +179,11 @@ async function run() {
       res.send(result);
     });
 
+    // Category related api
+    app.get("/categories", async (req, res) => {
+      const result = await categoryCollection.find().limit(6).toArray();
+      res.send(result);
+    });
     // Category related api
     app.get("/category", async (req, res) => {
       const result = await categoryCollection.find().toArray();
