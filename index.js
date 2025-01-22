@@ -27,6 +27,7 @@ async function run() {
     const userCollection = db.collection("users");
     const medicineCollection = db.collection("medicine");
     const categoryCollection = db.collection("category");
+    const cartCollection = db.collection("cart");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -217,6 +218,22 @@ async function run() {
       const id = req.params?.id;
       const query = { _id: new ObjectId(id) };
       const result = await categoryCollection.deleteOne(query);
+      res.send(result);
+    });
+
+     // cart related api
+
+    app.get("/cart/:email", verifyToken,async (req, res) => {
+      const email = req.params.email;
+      const filter = { email };
+      const result = await cartCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    // save cart data in db
+    app.post("/cart", verifyToken, async (req, res) => {
+      const addToCart = req.body;
+      const result = await cartCollection.insertOne(addToCart);
       res.send(result);
     });
 
