@@ -221,9 +221,9 @@ async function run() {
       res.send(result);
     });
 
-     // cart related api
+    // cart related api
 
-    app.get("/cart/:email", verifyToken,async (req, res) => {
+    app.get("/cart/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const filter = { email };
       const result = await cartCollection.find(filter).toArray();
@@ -234,6 +234,59 @@ async function run() {
     app.post("/cart", verifyToken, async (req, res) => {
       const addToCart = req.body;
       const result = await cartCollection.insertOne(addToCart);
+      res.send(result);
+    });
+    // update quantity
+    app.put("/cart/:id", verifyToken, async (req, res) => {
+      try {
+        const id = req.params.id; // Item ID from URL
+        const { quantity } = req.body; // Extract quantity from request body
+
+        // Fetch the item to get the unit price
+        const item = await cartCollection.findOne({ _id: new ObjectId(id) });
+
+        if (!item) {
+          return res
+            .status(404)
+            .json({ success: false, message: "Item not found" });
+        }
+
+        // Calculate the new total price based on quantity and unit price
+        const totalPrice = parseFloat(item.price) * quantity;
+
+        // Update the quantity and total price in the database
+        const result = await cartCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { quantity, totalPrice } }
+        );
+
+        if (result.modifiedCount > 0) {
+          res.json({
+            success: true,
+            message: "Quantity updated successfully!",
+          });
+        } else {
+          res.json({ success: false, message: "Failed to update quantity" });
+        }
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          message: "Server error",
+          error: error.message,
+        });
+      }
+    });
+
+    // Remove a specific item from the cart
+    app.delete("/cart/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await cartCollection.deleteOne(query);
+      res.send(result);
+    });
+    // Remove  all item from the cart
+    app.delete("/cart", verifyToken, async (req, res) => {
+      const result = await cartCollection.deleteMany();
       res.send(result);
     });
 
