@@ -187,6 +187,44 @@ async function run() {
       res.send(result);
     });
 
+
+    // filter by discount medicine
+    app.get("/discount-products", async (req, res) => {
+      try {
+        // Aggregation to filter products with discount greater than 0
+        const discountProducts = await medicineCollection
+          .aggregate([
+            {
+              $match: {
+                discount: { $type: "string" },
+              },
+            },
+            {
+              $addFields: {
+                discount: {
+                  $toInt: "$discount", // Convert discount string to number
+                },
+              },
+            },
+            {
+              $match: {
+                discount: { $gt: 0 },
+              },
+            },
+          ])
+          .toArray();
+
+        if (discountProducts.length > 0) {
+          res.status(200).send(discountProducts);
+        } else {
+          res.status(404).send({ message: "No discounted products found." });
+        }
+      } catch (error) {
+        console.error("Error fetching discounted products:", error);
+        res.status(500).send({ error: "Internal server error." });
+      }
+    });
+
     //  save medicine data in db
     app.post("/medicines", verifyToken, async (req, res) => {
       const medicineData = req.body;
