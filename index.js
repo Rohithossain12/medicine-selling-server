@@ -127,6 +127,7 @@ async function run() {
       res.send(result);
     });
 
+    // user data save in db
     app.post("/users", async (req, res) => {
       const user = req.body;
       // Check if the user already exists based on email
@@ -138,6 +139,38 @@ async function run() {
       // Save the new user
       const result = await userCollection.insertOne(user);
       res.status(201).send(result);
+    });
+
+    // user data update
+
+    app.put("/user/updateProfile/:email", verifyToken, async (req, res) => {
+      console.log("Request Params:", req.params);
+      console.log("Request Body:", req.body);
+
+      const email = req.params.email;
+      const filter = { email: email };
+      const { name, photo } = req.body;
+
+      const updatedDoc = {
+        $set: {
+          name,
+          photo,
+        },
+      };
+
+      try {
+        const result = await userCollection.updateOne(filter, updatedDoc);
+        console.log("Update Result:", result);
+
+        if (result.modifiedCount > 0) {
+          res.send({ success: true, message: "Profile updated successfully." });
+        } else {
+          res.status(404).send({ error: "User not found or no changes made." });
+        }
+      } catch (error) {
+        console.error("Error updating user profile:", error);
+        res.status(500).send({ error: "Internal server error." });
+      }
     });
 
     // Medicine Related api
