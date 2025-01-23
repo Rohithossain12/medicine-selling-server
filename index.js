@@ -28,6 +28,7 @@ async function run() {
     const medicineCollection = db.collection("medicine");
     const categoryCollection = db.collection("category");
     const cartCollection = db.collection("cart");
+    const advertisementCollection = db.collection("advertisements");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -145,7 +146,6 @@ async function run() {
 
     app.put("/user/updateProfile/:email", verifyToken, async (req, res) => {
       console.log("Request Params:", req.params);
-      console.log("Request Body:", req.body);
 
       const email = req.params.email;
       const filter = { email: email };
@@ -186,7 +186,6 @@ async function run() {
       const result = await medicineCollection.find(query).toArray();
       res.send(result);
     });
-
 
     // filter by discount medicine
     app.get("/discount-products", async (req, res) => {
@@ -361,6 +360,60 @@ async function run() {
       res.send(result);
     });
 
+    // get all advertisements
+    app.get("/advertisements", verifyToken, async (req, res) => {
+      const result = await advertisementCollection.find().toArray();
+      res.send(result);
+    });
+
+    // get specific by advertisements
+    app.get("/advertisements/:email", verifyToken, async (req, res) => {
+      const email = req.params?.email;
+      const filter = { seller: email };
+      const result = await advertisementCollection.find(filter).toArray();
+      res.send(result);
+    });
+    // save advertisements in db
+    app.post("/advertisements", verifyToken, async (req, res) => {
+      const advertisementData = req.body;
+      const result = await advertisementCollection.insertOne(advertisementData);
+      res.send(result);
+    });
+
+    // PATCH endpoint to update advertisement status
+    app.patch("/advertisements/:id", async (req, res) => {
+      const id = req.params.id; 
+      const { status } = req.body; 
+
+      try {
+        // Ensure valid MongoDB ObjectId
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ error: "Invalid advertisement ID." });
+        }
+
+        // Update the advertisement's status in the database
+        const result = await advertisementCollection.updateOne(
+          { _id: new ObjectId(id) }, // Filter by ID
+          { $set: { status } } // Update the "status" field
+        );
+
+        if (result.modifiedCount > 0) {
+          res.send({ success: true, message: "Status updated successfully." });
+        } else {
+          res
+            .status(404)
+            .send({ success: false, message: "Advertisement not found." });
+        }
+      } catch (error) {
+        console.error("Failed to update status:", error);
+        res
+          .status(500)
+          .send({ success: false, message: "Internal server error." });
+      }
+    });
+
+
+    
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
