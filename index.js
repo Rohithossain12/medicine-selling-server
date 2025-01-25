@@ -2,9 +2,13 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+const bodyParser = require("body-parser");
+const Stripe = require("stripe");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 const app = express();
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // middleware
 app.use(express.json());
@@ -29,6 +33,7 @@ async function run() {
     const categoryCollection = db.collection("category");
     const cartCollection = db.collection("cart");
     const advertisementCollection = db.collection("advertisements");
+    const orderCollection = db.collection("orders");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -174,8 +179,12 @@ async function run() {
     });
 
     // Medicine Related api
+    app.get("/allMedicines", async (req, res) => {
+      const result = await medicineCollection.find().toArray();
+      res.send(result);
+    });
 
-    // get all medicine
+    // get all medicine by category
     app.get("/medicines", async (req, res) => {
       const { category } = req.query; // Extract category from query parameters
 
@@ -382,8 +391,8 @@ async function run() {
 
     // PATCH endpoint to update advertisement status
     app.patch("/advertisements/:id", async (req, res) => {
-      const id = req.params.id; 
-      const { status } = req.body; 
+      const id = req.params.id;
+      const { status } = req.body;
 
       try {
         // Ensure valid MongoDB ObjectId
@@ -412,8 +421,81 @@ async function run() {
       }
     });
 
+    // orders related apis
 
-    
+    // Create payment intent endpoint
+    app.post("/create-payment-intent", async (req, res) => {
+      try {
+        const { amount } = req.body;
+
+        if (!amount || amount <= 0) {
+          return res.status(400).json({ error: "Invalid payment amount" });
+        }
+
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(amount), // Amount in cents
+          currency: "usd",
+          payment_method_types: ["card"],
+        });
+
+        res.status(200).json({ clientSecret: paymentIntent.client_secret });
+      } catch (error) {
+        console.error("Error creating payment intent:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      }
+    });
+
+    // Save payment details to order collection
+    app.post("/orders", verifyToken, async (req, res) => {
+      try {
+        const orderDetails = req.body;
+
+        // Ensure required fields are provided
+        const {
+          buyer,
+          totalAmount,
+          paymentStatus,
+          transactionId,
+          medicineIds, // Extract medicineIds
+          status, // Extract status
+        } = orderDetails;
+
+        if (
+          !buyer ||
+          !totalAmount ||
+          !paymentStatus ||
+          !transactionId ||
+          !medicineIds ||
+          status === undefined
+        ) {
+          return res
+            .status(400)
+            .json({ success: false, message: "Missing required fields" });
+        }
+
+        // Insert order details into orderCollection
+        const result = await orderCollection.insertOne({
+          buyer,
+          totalAmount,
+          paymentStatus,
+          transactionId,
+          medicineIds, // Save medicineIds
+          status, // Save status
+          orderDate: new Date(),
+        });
+
+        res.status(201).json({
+          success: true,
+          orderId: result.insertedId,
+        });
+      } catch (error) {
+        console.error("Error saving order details:", error);
+        res
+          .status(500)
+          .json({ success: false, message: "Internal server error" });
+      }
+    });
+
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
