@@ -186,11 +186,11 @@ async function run() {
 
     // get all medicine by category
     app.get("/medicines", async (req, res) => {
-      const { category } = req.query; // Extract category from query parameters
+      const { category } = req.query;
 
       let query = {};
       if (category) {
-        query = { category }; // Add category filter if provided
+        query = { category };
       }
       const result = await medicineCollection.find(query).toArray();
       res.send(result);
@@ -199,7 +199,7 @@ async function run() {
     // filter by discount medicine
     app.get("/discount-products", async (req, res) => {
       try {
-        // Aggregation to filter products with discount greater than 0
+        
         const discountProducts = await medicineCollection
           .aggregate([
             {
@@ -210,7 +210,7 @@ async function run() {
             {
               $addFields: {
                 discount: {
-                  $toInt: "$discount", // Convert discount string to number
+                  $toInt: "$discount",
                 },
               },
             },
@@ -318,10 +318,9 @@ async function run() {
     // update quantity
     app.put("/cart/:id", verifyToken, async (req, res) => {
       try {
-        const id = req.params.id; // Item ID from URL
-        const { quantity } = req.body; // Extract quantity from request body
+        const id = req.params.id;
+        const { quantity } = req.body;
 
-        // Fetch the item to get the unit price
         const item = await cartCollection.findOne({ _id: new ObjectId(id) });
 
         if (!item) {
@@ -330,10 +329,8 @@ async function run() {
             .json({ success: false, message: "Item not found" });
         }
 
-        // Calculate the new total price based on quantity and unit price
         const totalPrice = parseFloat(item.price) * quantity;
 
-        // Update the quantity and total price in the database
         const result = await cartCollection.updateOne(
           { _id: new ObjectId(id) },
           { $set: { quantity, totalPrice } }
@@ -395,15 +392,13 @@ async function run() {
       const { status } = req.body;
 
       try {
-        // Ensure valid MongoDB ObjectId
         if (!ObjectId.isValid(id)) {
           return res.status(400).send({ error: "Invalid advertisement ID." });
         }
 
-        // Update the advertisement's status in the database
         const result = await advertisementCollection.updateOne(
-          { _id: new ObjectId(id) }, // Filter by ID
-          { $set: { status } } // Update the "status" field
+          { _id: new ObjectId(id) },
+          { $set: { status } }
         );
 
         if (result.modifiedCount > 0) {
@@ -422,6 +417,43 @@ async function run() {
     });
 
     // orders related apis
+    app.get("/order-details", async (req, res) => {
+      const orders = await orderCollection.find().toArray();
+      for (const order of orders) {
+        for (const item of order.medicineItem) {
+          // Get the medicine details
+          const medicine = await medicineCollection.findOne({
+            _id: new ObjectId(item.medicineId),
+          });
+
+          Object.assign(item, {
+            quantity: item.quantity,
+            itemName: medicine.itemName,
+            email: medicine.email,
+            totalPrice: medicine.perUnitPrice * item.quantity,
+          });
+        }
+      }
+
+      res.send(orders);
+    });
+
+    // get all orders
+    app.get("/orders", async (req, res) => {
+      const result = await orderCollection.find().toArray();
+      res.send(result);
+    });
+
+    // orders status update
+    app.patch("/orders/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
+      const result = await orderCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: status } }
+      );
+      res.send(result);
+    });
 
     // Create payment intent endpoint
     app.post("/create-payment-intent", async (req, res) => {
@@ -433,7 +465,7 @@ async function run() {
         }
 
         const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(amount), // Amount in cents
+          amount: Math.round(amount),
           currency: "usd",
           payment_method_types: ["card"],
         });
@@ -450,14 +482,13 @@ async function run() {
       try {
         const orderDetails = req.body;
 
-        // Ensure required fields are provided
         const {
           buyer,
           totalAmount,
           paymentStatus,
           transactionId,
-          medicineIds, // Extract medicineIds
-          status, // Extract status
+          medicineItem,
+          status,
         } = orderDetails;
 
         if (
@@ -465,7 +496,7 @@ async function run() {
           !totalAmount ||
           !paymentStatus ||
           !transactionId ||
-          !medicineIds ||
+          !medicineItem ||
           status === undefined
         ) {
           return res
@@ -473,14 +504,13 @@ async function run() {
             .json({ success: false, message: "Missing required fields" });
         }
 
-        // Insert order details into orderCollection
         const result = await orderCollection.insertOne({
           buyer,
           totalAmount,
           paymentStatus,
           transactionId,
-          medicineIds, // Save medicineIds
-          status, // Save status
+          medicineItem,
+          status,
           orderDate: new Date(),
         });
 
