@@ -177,13 +177,13 @@ async function run() {
     });
 
     // Medicine Related api
-    app.get("/allMedicines", verifyToken, async (req, res) => {
+    app.get("/allMedicines", async (req, res) => {
       const result = await medicineCollection.find().toArray();
       res.send(result);
     });
 
     // Get all medicines by category and email
-    app.get("/medicines", verifyToken, async (req, res) => {
+    app.get("/medicines", async (req, res) => {
       const { category, email } = req.query;
 
       let query = {};
@@ -258,7 +258,7 @@ async function run() {
         $set: updateMedicine,
       };
       const result = await medicineCollection.updateOne(filter, updatedDoc);
-      res.send(result)
+      res.send(result);
     });
 
     // Delete a Medicine By ID
@@ -275,7 +275,7 @@ async function run() {
       res.send(result);
     });
     // Category related api
-    app.get("/category", verifyToken, async (req, res) => {
+    app.get("/category", async (req, res) => {
       const result = await categoryCollection.find().toArray();
       res.send(result);
     });
@@ -437,6 +437,47 @@ async function run() {
     // orders related apis
 
     // Get order details filtered by email
+    app.get("/order-details-seller", async (req, res) => {
+      const email = req.query.email;
+   
+      try {
+        const orders = await orderCollection.find().toArray();
+
+        const filteredOrders = [];
+
+        for (const order of orders) {
+          const filteredItems = [];
+
+          for (const item of order.medicineItem) {
+            // Get the medicine details
+            const medicine = await medicineCollection.findOne({
+              _id: new ObjectId(item.medicineId),
+            });
+
+            Object.assign(item, {
+              quantity: item.quantity,
+              itemName: medicine.itemName,
+              email: medicine.email,
+              totalPrice: medicine.perUnitPrice * item.quantity,
+            });
+
+            if (medicine.email === email) {
+              filteredItems.push(item);
+            }
+          }
+
+          if (filteredItems.length > 0) {
+            filteredOrders.push({ ...order, medicineItem: filteredItems });
+          }
+        }
+
+        res.send(filteredOrders);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to fetch orders", error });
+      }
+    });
+
+    // Get order details
     app.get("/order-details", verifyToken, async (req, res) => {
       const { email } = req.query;
 
