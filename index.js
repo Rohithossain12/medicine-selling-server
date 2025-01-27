@@ -66,18 +66,22 @@ async function run() {
       const email = req.decoded.email;
       const query = { email: email };
       const result = await userCollection.findOne(query);
-      if (!result || result !== "admin")
+      if (!result || result.role !== "admin") {
         return res.status(403).send({ message: "forbidden access" });
+      }
+
       next();
     };
 
-    // Verify admin middleware
+    // Verify Seller middleware
     const verifySeller = async (req, res, next) => {
       const email = req.decoded.email;
       const query = { email: email };
-      const result = await userCollection.findOne(query);
-      if (!result || result !== "seller")
-        return res.status(401).send({ message: "forbidden access" });
+      const user = await userCollection.findOne(query);
+      if (!user || user.role !== "seller") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
       next();
     };
 
@@ -87,13 +91,10 @@ async function run() {
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: "unauthorized access" });
       }
-
       const query = { email: email };
       const user = await userCollection.findOne(query);
-      let admin = false;
-      if (user) {
-        admin = user?.role === "admin";
-      }
+      // Check if the user is an admin
+      const admin = user?.role === "admin";
       res.send({ admin });
     });
 
@@ -103,13 +104,10 @@ async function run() {
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: "unauthorized access" });
       }
-
       const query = { email: email };
       const user = await userCollection.findOne(query);
-      let seller = false;
-      if (user) {
-        seller = user?.role === "seller";
-      }
+
+      const seller = user?.role === "seller";
       res.send({ seller });
     });
 
@@ -120,7 +118,7 @@ async function run() {
     });
 
     // updated user role
-    app.patch("/users/:id", verifyToken, async (req, res) => {
+    app.patch("/users/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params?.id;
       const newRole = req.body.role;
       const filter = { _id: new ObjectId(id) };
@@ -134,7 +132,7 @@ async function run() {
     });
 
     // user data save in db
-    app.post("/users", async (req, res) => {
+    app.post("/users", verifyToken, async (req, res) => {
       const user = req.body;
       // Check if the user already exists based on email
       const query = { email: user.email };
@@ -179,27 +177,38 @@ async function run() {
     });
 
     // Medicine Related api
-    app.get("/allMedicines", async (req, res) => {
+    app.get("/allMedicines", verifyToken, async (req, res) => {
       const result = await medicineCollection.find().toArray();
       res.send(result);
     });
 
-    // get all medicine by category
-    app.get("/medicines", async (req, res) => {
-      const { category } = req.query;
+    // Get all medicines by category and email
+    app.get("/medicines", verifyToken, async (req, res) => {
+      const { category, email } = req.query;
 
       let query = {};
+
+      // Check if category is provided and add it to the query
       if (category) {
-        query = { category };
+        query.category = category;
       }
-      const result = await medicineCollection.find(query).toArray();
-      res.send(result);
+
+      // Check if email is provided and add it to the query
+      if (email) {
+        query.email = email;
+      }
+
+      try {
+        const result = await medicineCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to fetch medicines", error });
+      }
     });
 
     // filter by discount medicine
     app.get("/discount-products", async (req, res) => {
       try {
-        
         const discountProducts = await medicineCollection
           .aggregate([
             {
@@ -234,14 +243,14 @@ async function run() {
     });
 
     //  save medicine data in db
-    app.post("/medicines", verifyToken, async (req, res) => {
+    app.post("/medicines", verifyToken, verifySeller, async (req, res) => {
       const medicineData = req.body;
       const result = await medicineCollection.insertOne(medicineData);
       res.send(result);
     });
 
     // Update a medicine by ID
-    app.put("/medicine/:id", verifyToken, async (req, res) => {
+    app.put("/medicine/:id", verifyToken, verifySeller, async (req, res) => {
       const id = req.params.id;
       const updateMedicine = req.body;
       const filter = { _id: new ObjectId(id) };
@@ -249,10 +258,11 @@ async function run() {
         $set: updateMedicine,
       };
       const result = await medicineCollection.updateOne(filter, updatedDoc);
+      res.send(result)
     });
 
     // Delete a Medicine By ID
-    app.delete("/medicine/:id", verifyToken, async (req, res) => {
+    app.delete("/medicine/:id", verifyToken, verifySeller, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await medicineCollection.deleteOne(filter);
@@ -265,19 +275,19 @@ async function run() {
       res.send(result);
     });
     // Category related api
-    app.get("/category", async (req, res) => {
+    app.get("/category", verifyToken, async (req, res) => {
       const result = await categoryCollection.find().toArray();
       res.send(result);
     });
     //  save category data in db
-    app.post("/category", verifyToken, async (req, res) => {
+    app.post("/category", verifyToken, verifyAdmin, async (req, res) => {
       const categoryData = req.body;
       const result = await categoryCollection.insertOne(categoryData);
       res.send(result);
     });
 
     // Update a category by ID
-    app.put("/category/:id", verifyToken, async (req, res) => {
+    app.put("/category/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const { categoryName, companyName, categoryImage } = req.body;
       const filter = { _id: new ObjectId(id) };
@@ -293,7 +303,7 @@ async function run() {
     });
 
     // Delete a category by ID
-    app.delete("/category/:id", verifyToken, async (req, res) => {
+    app.delete("/category/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params?.id;
       const query = { _id: new ObjectId(id) };
       const result = await categoryCollection.deleteOne(query);
@@ -380,62 +390,85 @@ async function run() {
       res.send(result);
     });
     // save advertisements in db
-    app.post("/advertisements", verifyToken, async (req, res) => {
+    app.post("/advertisements", verifyToken, verifySeller, async (req, res) => {
       const advertisementData = req.body;
       const result = await advertisementCollection.insertOne(advertisementData);
       res.send(result);
     });
 
     // PATCH endpoint to update advertisement status
-    app.patch("/advertisements/:id", async (req, res) => {
-      const id = req.params.id;
-      const { status } = req.body;
+    app.patch(
+      "/advertisements/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const { status } = req.body;
 
-      try {
-        if (!ObjectId.isValid(id)) {
-          return res.status(400).send({ error: "Invalid advertisement ID." });
-        }
+        try {
+          if (!ObjectId.isValid(id)) {
+            return res.status(400).send({ error: "Invalid advertisement ID." });
+          }
 
-        const result = await advertisementCollection.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { status } }
-        );
+          const result = await advertisementCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { status } }
+          );
 
-        if (result.modifiedCount > 0) {
-          res.send({ success: true, message: "Status updated successfully." });
-        } else {
+          if (result.modifiedCount > 0) {
+            res.send({
+              success: true,
+              message: "Status updated successfully.",
+            });
+          } else {
+            res
+              .status(404)
+              .send({ success: false, message: "Advertisement not found." });
+          }
+        } catch (error) {
+          console.error("Failed to update status:", error);
           res
-            .status(404)
-            .send({ success: false, message: "Advertisement not found." });
+            .status(500)
+            .send({ success: false, message: "Internal server error." });
         }
-      } catch (error) {
-        console.error("Failed to update status:", error);
-        res
-          .status(500)
-          .send({ success: false, message: "Internal server error." });
       }
-    });
+    );
 
     // orders related apis
-    app.get("/order-details", async (req, res) => {
-      const orders = await orderCollection.find().toArray();
-      for (const order of orders) {
-        for (const item of order.medicineItem) {
-          // Get the medicine details
-          const medicine = await medicineCollection.findOne({
-            _id: new ObjectId(item.medicineId),
-          });
 
-          Object.assign(item, {
-            quantity: item.quantity,
-            itemName: medicine.itemName,
-            email: medicine.email,
-            totalPrice: medicine.perUnitPrice * item.quantity,
-          });
-        }
+    // Get order details filtered by email
+    app.get("/order-details", verifyToken, async (req, res) => {
+      const { email } = req.query;
+
+      let query = {};
+      if (email) {
+        query = { buyer: email };
       }
 
-      res.send(orders);
+      try {
+        const orders = await orderCollection.find(query).toArray();
+
+        for (const order of orders) {
+          for (const item of order.medicineItem) {
+            // Get the medicine details
+            const medicine = await medicineCollection.findOne({
+              _id: new ObjectId(item.medicineId),
+            });
+
+            // Add additional details to the item
+            Object.assign(item, {
+              quantity: item.quantity,
+              itemName: medicine.itemName,
+              email: medicine.email,
+              totalPrice: medicine.perUnitPrice * item.quantity,
+            });
+          }
+        }
+
+        res.send(orders);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to fetch orders", error });
+      }
     });
 
     // get all orders
@@ -445,7 +478,7 @@ async function run() {
     });
 
     // orders status update
-    app.patch("/orders/:id", verifyToken, async (req, res) => {
+    app.patch("/orders/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const { status } = req.body;
       const result = await orderCollection.updateOne(
