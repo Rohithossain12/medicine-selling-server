@@ -18,3 +18,7 @@ PharmaWorld is a cutting-edge multi-vendor e-commerce platform dedicated to maki
 ## Admin User Name : pharmaworld@gmail.com
 
 # Password : Pharma@2025
+
+## Seller User Name : pharma2@gmail.com
+
+# Password : Pharma@2025
