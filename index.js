@@ -2,23 +2,26 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const bodyParser = require("body-parser");
 const Stripe = require("stripe");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 const app = express();
+const bodyParser = require("body-parser");
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // middleware
 app.use(express.json());
+
 app.use(
   cors({
-    origin:[
-      'http://localhost:5173',
-      'https://starlit-bombolone-866a08.netlify.app/'
+    origin: [
+      "http://localhost:5173",
+      "https://starlit-bombolone-866a08.netlify.app",
     ],
-    credentials: true
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 app.use(bodyParser.urlencoded({ extended: true }));
