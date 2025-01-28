@@ -13,7 +13,7 @@ PharmaWorld is a cutting-edge multi-vendor e-commerce platform dedicated to maki
 
 ## Live Link.
 
-###
+### https://endearing-fenglisu-dad95b.netlify.app
 
 ## Admin User Name : pharmaworld@gmail.com
 
