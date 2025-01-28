@@ -388,7 +388,7 @@ async function run() {
     });
 
     // get all advertisements
-    app.get("/advertisements", verifyToken, async (req, res) => {
+    app.get("/advertisements", async (req, res) => {
       const result = await advertisementCollection.find().toArray();
       res.send(result);
     });
