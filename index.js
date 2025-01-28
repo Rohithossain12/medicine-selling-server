@@ -97,7 +97,7 @@ async function run() {
     };
 
     // Check admin
-    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+    app.get("/users/admin/:email",  async (req, res) => {
       const email = req.params?.email;
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: "unauthorized access" });
@@ -110,7 +110,7 @@ async function run() {
     });
 
     // Check Seller
-    app.get("/users/seller/:email", verifyToken, async (req, res) => {
+    app.get("/users/seller/:email",  async (req, res) => {
       const email = req.params?.email;
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: "unauthorized access" });
