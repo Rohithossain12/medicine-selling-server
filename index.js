@@ -138,7 +138,7 @@ async function run() {
     });
 
     // user data save in db
-    app.post("/users", verifyToken, async (req, res) => {
+    app.post("/users",  async (req, res) => {
       const user = req.body;
       // Check if the user already exists based on email
       const query = { email: user.email };
