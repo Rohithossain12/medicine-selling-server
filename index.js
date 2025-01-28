@@ -12,13 +12,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // middleware
 app.use(express.json());
-app.use(cors({
-  origin:[
-    'http://localhost:5173',
-    'https://starlit-bombolone-866a08.netlify.app/'
-  ],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin:[
+      'http://localhost:5173',
+      'https://starlit-bombolone-866a08.netlify.app/'
+    ],
+    credentials: true
+  })
+);
 app.use(bodyParser.urlencoded({ extended: true }));
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.uv360.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -138,7 +140,7 @@ async function run() {
     });
 
     // user data save in db
-    app.post("/users",  async (req, res) => {
+    app.post("/users", async (req, res) => {
       const user = req.body;
       // Check if the user already exists based on email
       const query = { email: user.email };
@@ -445,7 +447,7 @@ async function run() {
     // Get order details filtered by email
     app.get("/order-details-seller", async (req, res) => {
       const email = req.query.email;
-   
+
       try {
         const orders = await orderCollection.find().toArray();
 
