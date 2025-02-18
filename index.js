@@ -192,6 +192,10 @@ async function run() {
       const result = await medicineCollection.find().toArray();
       res.send(result);
     });
+    app.get("/allMedicine", async (req, res) => {
+      const result = await medicineCollection.find().limit(4).toArray();
+      res.send(result);
+    });
 
     // Get all medicines by category and email
     app.get("/medicines", async (req, res) => {
