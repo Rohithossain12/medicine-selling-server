@@ -12,7 +12,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // middleware
 app.use(express.json());
 
-
 app.use(
   cors({
     origin: [
@@ -128,6 +127,13 @@ async function run() {
       res.send(result);
     });
 
+    // user related apis
+    app.get("/users/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const result = await userCollection.findOne({ email: email });
+      res.send(result);
+    });
+
     // updated user role
     app.patch("/users/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params?.id;
@@ -159,16 +165,16 @@ async function run() {
     // user data update
 
     app.put("/user/updateProfile/:email", verifyToken, async (req, res) => {
-      console.log("Request Params:", req.params);
-
       const email = req.params.email;
       const filter = { email: email };
-      const { name, photo } = req.body;
+      const { name, photo, contact, address } = req.body;
 
       const updatedDoc = {
         $set: {
           name,
           photo,
+          contact,
+          address,
         },
       };
 
