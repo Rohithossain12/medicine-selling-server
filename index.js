@@ -128,7 +128,7 @@ async function run() {
     });
 
     // user related apis
-    app.get("/users/:email",  async (req, res) => {
+    app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       const result = await userCollection.findOne({ email: email });
       res.send(result);
