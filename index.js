@@ -576,7 +576,7 @@ async function run() {
     app.post("/orders", verifyToken, async (req, res) => {
       try {
         const orderDetails = req.body;
-
+    
         const {
           buyer,
           totalAmount,
@@ -585,7 +585,7 @@ async function run() {
           medicineItem,
           status,
         } = orderDetails;
-
+    
         if (
           !buyer ||
           !totalAmount ||
@@ -598,7 +598,8 @@ async function run() {
             .status(400)
             .json({ success: false, message: "Missing required fields" });
         }
-
+    
+        // Insert the order
         const result = await orderCollection.insertOne({
           buyer,
           totalAmount,
@@ -608,7 +609,10 @@ async function run() {
           status,
           orderDate: new Date(),
         });
-
+    
+        // After successful order insertion, delete the user's cart items
+        await cartCollection.deleteMany({ email: buyer.email });
+    
         res.status(201).json({
           success: true,
           orderId: result.insertedId,
@@ -620,6 +624,7 @@ async function run() {
           .json({ success: false, message: "Internal server error" });
       }
     });
+    
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
